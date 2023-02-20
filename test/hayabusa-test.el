@@ -12,12 +12,15 @@
     (let* ((hayabusa-keys-alist '((?j . ?-))))
       (ert-simulate-command (list #'hayabusa-insert nil ?j))
       (should (string= "j" (buffer-substring (point-min) (point-max))))
+
       (ert-simulate-command (list #'hayabusa-insert nil ?j))
       (should (string= "-" (buffer-substring (point-min) (point-max))))
+
       (ert-simulate-command (list #'hayabusa-insert nil ?j))
       (should (string= "-j" (buffer-substring (point-min) (point-max))))
-      (ert-simulate-command (list #'ignore))
 
+      (ert-simulate-command (list #'ignore))
+      (ert-simulate-command (list #'hayabusa-insert nil ?j))
       (should (string= "-jj" (buffer-substring (point-min) (point-max)))))))
 
 (ert-deftest test-hayabusa-insert-alt-char ()

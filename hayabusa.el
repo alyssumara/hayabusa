@@ -32,7 +32,12 @@
 
 (defvar hayabusa--pre-command nil)
 
-(defvar hayabusa--idle-timer nil)
+(defvar hayabusa--clear-pre-command-with-idle-timer nil)
+
+(defun hayabusa--set-clear-pre-command-with-idle-timer ()
+  (when hayabusa-insert-delay
+    (setq hayabusa--clear-pre-command-with-idle-timer
+	  (run-with-idle-timer hayabusa-insert-delay nil #'hayabusa--clear-pre-command))))
 
 (defun hayabusa--clear-pre-command ()
   (setq hayabusa--pre-command nil))
@@ -52,8 +57,7 @@
 	  ((hayabusa--should-replace-char-p count char alt-char)
 	   (hayabusa--replace-char alt-char))
 	  (t (hayabusa--insert-char count char))))
-  (when hayabusa-insert-delay
-    (setq hayabusa--idle-timer (run-with-idle-timer hayabusa-insert-delay nil #'hayabusa--clear-pre-command))))
+  (hayabusa--set-clear-pre-command-with-idle-timer))
 
 (defun hayabusa-global-mode ()
   (interactive)
