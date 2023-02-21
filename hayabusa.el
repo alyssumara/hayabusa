@@ -1,14 +1,14 @@
 ;;; hayabusa.el --- hayabusa -*- lexical-binding: t -*-
 
 
+
 ;;; Code:
 
 (defgroup hayabusa nil
   ""
   :group 'convenience)
 
-(defcustom hayabusa-keys-alist
-  '(())
+(defcustom hayabusa-keys-alist '(())
   ""
   :group 'hayabusa
   :type 'alist)
@@ -22,6 +22,7 @@
 
 (define-minor-mode hayabusa-mode
   "hayabusa"
+  :global t
   :keymap hayabusa-mode-map
   :lighter " 隼")
 
@@ -29,6 +30,11 @@
   ""
   :group 'hayabusa
   :type 'float)
+
+(defcustom hayabusa-insert-enable-when-isearch-mode t
+  ""
+  :group 'hayabusa
+  :type 'boolean)
 
 (defvar hayabusa--pre-command nil)
 
@@ -61,14 +67,17 @@
 
 (defun hayabusa-global-mode ()
   (interactive)
-  (dolist (hook hayabusa-mode-hooks)
-    (pcase hook
-      ('isearch-mode-hook
-       (define-key isearch-mode-map [remap isearch-printing-char] #'hayabusa-insert))
-      (hook
-       (add-hook hook 'hayabusa-mode))))
+					;  (dolist (hook hayabusa-mode-hooks)
+					;    (pcase hook
+					;      ('isearch-mode-hook
+					;       (define-key isearch-mode-map [remap isearch-printing-char] #'hayabusa-insert))
+					;      (hook
+					;       (add-hook hook 'hayabusa-mode))))
   (add-hook 'post-command-hook 'hayabusa--copy-pre-command)
-  (hayabusa--set-key-bindings))
+  (when hayabusa-insert-enable-when-isearch-mode
+    (define-key isearch-mode-map [remap isearch-printing-char] #'hayabusa-insert))
+  (hayabusa--set-key-bindings)
+  (hayabusa-mode t))
 
 (defun hayabusa--set-key-bindings ()
   (dolist (i (number-sequence ?\s ?\377))
@@ -118,8 +127,10 @@
 (defun hayabusa--delete-command ()
   (set--this-command-keys (kbd "DEL")) ; for term-char-mode
   (call-interactively (or (if isearch-mode #'isearch-del-char)
-			  (command-remapping (lookup-key (current-local-map) (kbd "DEL")))
-			  (lookup-key (current-local-map) (kbd "DEL"))
+			  (if (get-text-property (point) 'local-map)
+			      (lookup-key (get-char-property (point) 'local-map) (kbd "DEL"))
+			    (or (command-remapping (lookup-key (current-local-map) (kbd "DEL")))
+				(lookup-key (current-local-map) (kbd "DEL"))))
 			  (command-remapping (lookup-key (current-global-map) (kbd "DEL")))
 			  (lookup-key (current-global-map) (kbd "DEL"))
 			  #'delete-backward-char)))
@@ -129,8 +140,10 @@
   (let* ((current-prefix-arg count)
 	 (last-command-event char))
     (call-interactively (or (if isearch-mode #'isearch-printing-char)
-			    (command-remapping (lookup-key (current-local-map) (vector last-command-event)))
-			    (lookup-key (current-local-map) (vector last-command-event))
+			    (if (get-text-property (point) 'local-map)
+				(lookup-key (get-char-property (point) 'local-map) (vector last-command-event))
+			      (or (command-remapping (lookup-key (current-local-map) (vector last-command-event)))
+				  (lookup-key (current-local-map) (vector last-command-event))))
 			    (command-remapping (lookup-key (current-global-map) (vector last-command-event)))
 			    (lookup-key (current-global-map) (vector last-command-event))
 			    #'self-insert-command))))
