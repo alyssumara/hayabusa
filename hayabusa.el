@@ -13,11 +13,6 @@
   :group 'hayabusa
   :type 'alist)
 
-(defcustom hayabusa-mode-hooks ()
-  ""
-  :group 'hayabusa
-  :type 'hooklist)
-
 (defvar hayabusa-mode-map (make-sparse-keymap))
 
 (define-minor-mode hayabusa-mode
@@ -26,7 +21,7 @@
   :keymap hayabusa-mode-map
   :lighter " 隼")
 
-(defcustom hayabusa-insert-delay 0.5
+(defcustom hayabusa-insert-delay 0.3
   ""
   :group 'hayabusa
   :type 'float)
@@ -67,12 +62,6 @@
 
 (defun hayabusa-global-mode ()
   (interactive)
-					;  (dolist (hook hayabusa-mode-hooks)
-					;    (pcase hook
-					;      ('isearch-mode-hook
-					;       (define-key isearch-mode-map [remap isearch-printing-char] #'hayabusa-insert))
-					;      (hook
-					;       (add-hook hook 'hayabusa-mode))))
   (add-hook 'post-command-hook 'hayabusa--copy-pre-command)
   (when hayabusa-insert-enable-when-isearch-mode
     (define-key isearch-mode-map [remap isearch-printing-char] #'hayabusa-insert))
@@ -127,12 +116,7 @@
 (defun hayabusa--delete-command ()
   (set--this-command-keys (kbd "DEL")) ; for term-char-mode
   (call-interactively (or (if isearch-mode #'isearch-del-char)
-			  (if (get-text-property (point) 'local-map)
-			      (lookup-key (get-char-property (point) 'local-map) (kbd "DEL"))
-			    (or (command-remapping (lookup-key (current-local-map) (kbd "DEL")))
-				(lookup-key (current-local-map) (kbd "DEL"))))
-			  (command-remapping (lookup-key (current-global-map) (kbd "DEL")))
-			  (lookup-key (current-global-map) (kbd "DEL"))
+			  (hayabusa--lookup-key (kbd "DEL"))
 			  #'delete-backward-char)))
 
 (defun hayabusa--insert-command (count char)
@@ -140,13 +124,17 @@
   (let* ((current-prefix-arg count)
 	 (last-command-event char))
     (call-interactively (or (if isearch-mode #'isearch-printing-char)
-			    (if (get-text-property (point) 'local-map)
-				(lookup-key (get-char-property (point) 'local-map) (vector last-command-event))
-			      (or (command-remapping (lookup-key (current-local-map) (vector last-command-event)))
-				  (lookup-key (current-local-map) (vector last-command-event))))
-			    (command-remapping (lookup-key (current-global-map) (vector last-command-event)))
-			    (lookup-key (current-global-map) (vector last-command-event))
+			    (hayabusa--lookup-key (vector last-command-event))
 			    #'self-insert-command))))
+
+(defun hayabusa--lookup-key (key)
+  (or (if (get-text-property (point) 'local-map)
+	  (lookup-key (get-char-property (point) 'local-map) key)
+	(or (command-remapping (lookup-key (current-local-map) key))
+	    (lookup-key (current-local-map) key)))
+      (command-remapping (lookup-key (current-global-map) key))
+      (lookup-key (current-global-map) key)))
+
 
 (provide 'hayabusa)
 
