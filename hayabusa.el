@@ -31,20 +31,22 @@
   :group 'hayabusa
   :type 'boolean)
 
-(defvar hayabusa--pre-command nil)
+(defvar hayabusa--last-command nil)
 
-(defvar hayabusa--clear-pre-command-with-idle-timer nil)
+(defvar hayabusa--last-command-event nil)
 
-(defun hayabusa--set-clear-pre-command-with-idle-timer ()
+(defvar hayabusa--clear-last-command-with-idle-timer nil)
+
+(defun hayabusa--set-clear-last-command-with-idle-timer ()
   (when hayabusa-insert-delay
-    (setq hayabusa--clear-pre-command-with-idle-timer
-	  (run-with-idle-timer hayabusa-insert-delay nil #'hayabusa--clear-pre-command))))
+    (setq hayabusa--clear-last-command-with-idle-timer
+	  (run-with-idle-timer hayabusa-insert-delay nil #'hayabusa--clear-last-command))))
 
-(defun hayabusa--clear-pre-command ()
-  (setq hayabusa--pre-command nil))
+(defun hayabusa--clear-last-command ()
+  (setq hayabusa--last-command nil))
 
-(defun hayabusa--copy-pre-command ()
-  (setq hayabusa--pre-command this-command))
+(defun hayabusa--copy-last-command ()
+  (setq hayabusa--last-command this-command))
 
 (defun hayabusa-insert (&optional count char alt-char)
   (interactive)
@@ -57,12 +59,13 @@
 	   (hayabusa--insert-alt-char count (or alt-char char)))
 	  ((hayabusa--should-replace-char-p count char alt-char)
 	   (hayabusa--replace-char alt-char))
-	  (t (hayabusa--insert-char count char))))
-  (hayabusa--set-clear-pre-command-with-idle-timer))
+	  (t (hayabusa--insert-char count char)))
+    (setq hayabusa--last-command-event char))
+  (hayabusa--set-clear-last-command-with-idle-timer))
 
-(defun hayabusa-global-mode ()
+(defun hayabusa-mode-enable ()
   (interactive)
-  (add-hook 'post-command-hook 'hayabusa--copy-pre-command)
+  (add-hook 'post-command-hook 'hayabusa--copy-last-command)
   (when hayabusa-insert-enable-when-isearch-mode
     (define-key isearch-mode-map [remap isearch-printing-char] #'hayabusa-insert))
   (hayabusa--set-key-bindings)
@@ -104,7 +107,8 @@
     (and (not count)
 	 alt-char
 	 (eq preceding-char char)
- 	 (eq hayabusa--pre-command #'hayabusa-insert))))
+	 (eq hayabusa--last-command-event char)
+ 	 (eq hayabusa--last-command #'hayabusa-insert))))
 
 (defun hayabusa--replace-char (alt-char)
   (hayabusa--delete-command)
@@ -137,5 +141,7 @@
 
 
 (provide 'hayabusa)
+
+
 
 ;;; hayabusa.el ends here
